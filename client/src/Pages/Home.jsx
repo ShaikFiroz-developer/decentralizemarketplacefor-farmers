@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import React, { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { formatUnits, getBigInt, parseUnits, toBigInt } from "ethers";
 import {
   Menu,
   Home,
@@ -14,56 +15,80 @@ import {
   Carrot,
   Milk,
   X,
-} from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/authContext";
+import { BrowserProvider, Contract } from "ethers";
+import {
+  BUYER_ABI,
+  BuyerOperationsManagement,
+  FarmerOperationsManagement,
+  FARMER_ABI,
+} from "@/lib/contractaddress";
 
 const categories = [
-  { name: 'Fruits', icon: Apple },
-  { name: 'Vegetables', icon: Carrot },
-  { name: 'Grains', icon: Wheat },
-  { name: 'Dairy', icon: Milk },
+  { name: "Fruits", icon: Apple },
+  { name: "Vegetables", icon: Carrot },
+  { name: "Grains", icon: Wheat },
+  { name: "Dairy", icon: Milk },
 ];
 
 const HomePage = () => {
+  const { handlelogout, isLoggedIn } = useAuth();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [cartitems, setcartitems] = useState([]);
+  const [quantity, setquantity] = useState(0);
   const productsPerPage = 8;
-
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkUserToken();
-    fetchProducts();
-  }, []);
-
-  const checkUserToken = async () => {
-    try {
-      const response = await axios.get('http://localhost:8080/api/user/check-user', {
-        withCredentials: true,
-      });
-      if (!response.data.success) navigate('/login');
-    } catch (error) {
-      console.error('Error checking token:', error);
-      navigate('/login');
+    if (!isLoggedIn) {
+      navigate("/login");
     }
-  };
+    if (localStorage.getItem("useRole") == "farmer") {
+      navigate("/admin");
+    }
+    fetchProducts();
+  }, [isLoggedIn]);
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:8080/api/product', { withCredentials: true });
-      if (response.data.success && Array.isArray(response.data.products)) {
-        setProducts(response.data.products);
-        setFilteredProducts(response.data.products);
-      } else {
-        console.error('Unexpected response format:', response.data);
+      if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
       }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new Contract(
+        FarmerOperationsManagement,
+        FARMER_ABI,
+        signer
+      );
+      const tx = await contract.getAllListedProducts();
+      const formattedProducts = tx.map((product) => ({
+        _id: product[0],
+        productName: product[1],
+        productPrice: formatUnits(product[2], 18), // Convert from BigInt to human-readable price
+        description: product[3],
+        productType: product[4],
+        productImageUrl: product[5],
+        seller: product[6],
+        createdDate: product[7],
+        expiryDate: product[8],
+        quantity: product[9],
+      }));
+      setProducts(formattedProducts);
+      setFilteredProducts(formattedProducts);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.log(error);
     }
   };
 
@@ -96,26 +121,61 @@ const HomePage = () => {
   };
 
   const handleLogout = async () => {
+    await handlelogout();
+    window.location.reload();
+  };
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setModalOpen(true);
+  };
+  const handlePurchase = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
+    }
+
+    const provider = new BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new Contract(BuyerOperationsManagement, BUYER_ABI, signer);
+
     try {
-     const res= await axios.get('http://localhost:8080/api/user/logout', { withCredentials: true });
-     console.log(res.data)
-      if(res.data.success){
-        alert(res.data.message)
-        navigate('/login')
-      }
+      const price = parseUnits(selectedProduct.productPrice, 18);
+
+      // Convert _id to BigInt directly
+      const productId = BigInt(selectedProduct._id);
+      console.log(productId);
+
+      const tx = await contract.addToCart(
+        productId.toString(),
+        quantity,
+        selectedProduct.seller,
+        selectedProduct.productName,
+        quantity * selectedProduct.productPrice,
+        selectedProduct.productImageUrl
+      );
+      await tx.wait();
+      alert("Purchase successful!");
+      setModalOpen(false);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Purchase failed:", error);
+      alert("Purchase failed. Please try again.");
     }
   };
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = Array.isArray(filteredProducts)
-    ? filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
-    : [];
+  const currentProducts = filteredProducts.slice(
+    indexOfFirstProduct,
+    indexOfLastProduct
+  );
 
   const pageNumbers = [];
-  for (let i = 1; i <= Math.ceil(filteredProducts.length / productsPerPage); i++) {
+  for (
+    let i = 1;
+    i <= Math.ceil(filteredProducts.length / productsPerPage);
+    i++
+  ) {
     pageNumbers.push(i);
   }
 
@@ -127,13 +187,22 @@ const HomePage = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex space-x-4">
-          <Link to="/" className="flex items-center text-green-700 hover:underline">
+          <Link
+            to="/"
+            className="flex items-center text-green-700 hover:underline"
+          >
             <Home className="mr-2" /> Products
           </Link>
-          <Link to="/cart" className="flex items-center text-green-700 hover:underline">
+          <Link
+            to="/cart"
+            className="flex items-center text-green-700 hover:underline"
+          >
             <ShoppingCart className="mr-2" /> Cart
           </Link>
-          <Link to="/orders" className="flex items-center text-green-700 hover:underline">
+          <Link
+            to="/orders"
+            className="flex items-center text-green-700 hover:underline"
+          >
             <Package className="mr-2" /> Orders
           </Link>
         </div>
@@ -145,7 +214,11 @@ const HomePage = () => {
             size="icon"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
           </Button>
         </div>
 
@@ -199,7 +272,7 @@ const HomePage = () => {
             {categories.map((cat) => (
               <Button
                 key={cat.name}
-                variant={selectedCategory === cat.name ? 'default' : 'outline'}
+                variant={selectedCategory === cat.name ? "default" : "outline"}
                 onClick={() => handleCategoryFilter(cat.name)}
                 className="flex items-center"
               >
@@ -210,32 +283,37 @@ const HomePage = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 my-6">
           {currentProducts.map((product) => (
-            <Link to={`product/${product._id}`} key={product._id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6">
+            <Card
+              key={product._id}
+              className="shadow-md cursor-pointer"
+              onClick={() => handleProductClick(product)}
+            >
+              <CardContent className="space-y-2">
                 <img
                   src={product.productImageUrl}
                   alt={product.productName}
-                  className="w-full h-32 md:h-48 object-cover rounded-md mb-4"
+                  className="h-48 object-cover w-full"
                 />
-                <h3 className="font-semibold text-green-800">{product.productName}</h3>
-                <p className="text-green-600">{product.productType}</p>
-                <p className="text-gray-500">{product.description}</p>
-                <p className="font-bold text-green-900">₹{product.productPrice}</p>
+                <div className="text-center space-y-1">
+                  <div className="font-bold text-lg">{product.productName}</div>
+                  <div className="text-gray-500">{product.productType}</div>
+                  <div className="text-green-700 text-xl">
+                    ${product.productPrice}
+                  </div>
+                </div>
               </CardContent>
-             
-            </Link>
+            </Card>
           ))}
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-center mt-6 space-x-2">
+        <div className="flex justify-center space-x-2">
           {pageNumbers.map((number) => (
             <Button
               key={number}
-              variant={currentPage === number ? 'default' : 'outline'}
-              size="sm"
+              variant={currentPage === number ? "default" : "outline"}
               onClick={() => setCurrentPage(number)}
             >
               {number}
@@ -243,6 +321,74 @@ const HomePage = () => {
           ))}
         </div>
       </div>
+
+      {/* Modal */}
+      {modalOpen && selectedProduct && (
+        <div
+          className={`fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50 ${
+            modalOpen ? "block" : "hidden"
+          }`}
+        >
+          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 className="text-2xl font-bold mb-4">
+              {selectedProduct.productName}
+            </h3>
+            <p className="text-gray-700 mb-4">{selectedProduct.description}</p>
+            <img
+              src={selectedProduct.productImageUrl}
+              alt={selectedProduct.productName}
+              className="w-full h-48 object-cover rounded-md mb-4"
+            />
+            <div className="text-xl font-semibold mb-4">
+              Price: ₹{selectedProduct.productPrice}
+            </div>
+
+            {/* Additional details */}
+            <div className="mb-4">
+              <span className="font-semibold">Seller ID:</span>{" "}
+              {selectedProduct.sellerId}
+            </div>
+            <div className="mb-4">
+              <span className="font-semibold">Packed Date:</span>{" "}
+              {new Date(selectedProduct.packedDate).toLocaleDateString()}
+            </div>
+            <div className="mb-4">
+              <span className="font-semibold">Expiry Date:</span>{" "}
+              {new Date(selectedProduct.expiryDate).toLocaleDateString()}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-between items-center space-x-4">
+              {/* Cart and Buy Section */}
+              <div className="flex flex-col items-start space-y-4">
+                {/* Cart Section */}
+                <div className="w-full shadow p-4 flex flex-col items-start justify-start rounded-md space-y-2">
+                  <p className="text-sm font-medium text-white">Amount:</p>
+                  <input
+                    type="number"
+                    onChange={(e) => {
+                      setquantity(e.target.value);
+                    }}
+                    className="border border-gray-300 rounded-md px-2 py-1 w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <Button onClick={handlePurchase} className="w-full">
+                    Add to Cart
+                  </Button>
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <Button
+                variant="destructive"
+                className="ml-2"
+                onClick={() => setModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

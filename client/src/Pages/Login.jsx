@@ -1,114 +1,123 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Mail, Lock, Sprout, Store } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ethers, BrowserProvider, Contract } from "ethers";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Sprout, Store, Lock, Mail } from "lucide-react";
+import {
+  FarmerOperationsManagement,
+  BuyerOperationsManagement,
+  FARMER_ABI,
+  BUYER_ABI,
+} from "@/lib/contractaddress";
+import { useAuth } from "@/context/authContext";
 
 const Login = () => {
-  const [loginData, setLoginData] = useState({ email: '', password: '', isFarmer: false });
+  const [loginData, setLoginData] = useState({
+    email: "",
+    password: "",
+    isFarmer: false,
+  });
+  console.log(useAuth());
+  const { handleLogin } = useAuth();
   const navigate = useNavigate();
 
-  const checkUserToken = async () => {
-    try {
-      const response = await axios.get(
-        "http://localhost:8080/api/user/check-user",
-        { withCredentials: true }
+  const handleMetaMaskCheck = async () => {
+    if (!window.ethereum) {
+      alert(
+        "MetaMask is required for login. Please install MetaMask and try again."
       );
-      const data = response.data;
-      console.log(data);
-  
-      if (data.success) {
-        if (data.role === 'buyer') {
-          navigate("/");
-        } else {
-          navigate('/admin');
-        }
-      }
-    } catch (error) {
-      // Check if the error is 401 (Unauthorized)
-      if (error.response && error.response.status === 401) {
-        console.warn("Unauthorized access - token might be missing or invalid.");
-      } else {
-        console.error("Error checking token:", error);
-        navigate("/login");
-      }
+      throw new Error("MetaMask not found.");
     }
+    await window.ethereum.request({ method: "eth_requestAccounts" });
   };
-  
-  useEffect(() => {
-    checkUserToken();
-  }, []);
 
-  const handleLogin = async (e) => {
+  const handleSecureLogin = async (e) => {
     e.preventDefault();
-    
-    console.log('Login Data:', loginData);
-  
+
     try {
-      const response = await axios.post(
-        'http://localhost:8080/api/user/login',
-        {
-          email: loginData.email,
-          password: loginData.password,
-          role: loginData.isFarmer ? 'farmer' : 'buyer'
-        },
-        { withCredentials: true }
+      // Check if MetaMask is available
+      await handleMetaMaskCheck();
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const walletAddress = await signer.getAddress();
+
+      // Choose contract and ABI based on user type
+      const contractAddress = loginData.isFarmer
+        ? FarmerOperationsManagement
+        : BuyerOperationsManagement;
+      const contractABI = loginData.isFarmer ? FARMER_ABI : BUYER_ABI;
+      const contract = new Contract(contractAddress, contractABI, signer);
+
+      const loginFunction = loginData.isFarmer
+        ? contract.FarmerLogin
+        : contract.BuyerLogin;
+
+      const isAuthenticated = await loginFunction(
+        loginData.email,
+        loginData.password
       );
-  
-      if (response.data.success) {
-        alert(response.data.message);
-        console.log("login details", response.data);
-  
-        if (response.data.user.role === 'farmer') {
-          navigate('/admin');
+
+      if (isAuthenticated) {
+        localStorage.setItem("userEmail", loginData.email);
+        localStorage.setItem(
+          "useRole",
+          loginData.isFarmer ? "farmer" : "buyer"
+        );
+
+        const res = await handleLogin();
+        console.log(res);
+        if (res) {
+          if (loginData.isFarmer) {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
         } else {
-          navigate('/');
+          alert("login successs unable to set session");
         }
       } else {
-        // Handle unsuccessful login attempt
-        alert(response.data.message);
+        alert("Something went wrong creating a session.");
       }
-  
     } catch (error) {
-      // Check if the error has a response and handle the API response error
-      if (error.response && error.response.data) {
-        alert(error.response.data.message);
-      } else {
-        console.error("Login error:", error);
-        alert("Some error occurred");
-      }
+      console.error("Error during login:", error.message);
+      alert("An error occurred during login. Please try again.");
     }
   };
-  
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-green-50 to-green-100 flex items-center justify-center p-4">
-      {/* Main content wrapper */}
-      <div className="w-full max-w-7xl px-4 py-8">
-        
-        {/* Centered content: Heading for farmers, Login form */}
+    <div className="min-h-screen w-full bg-gradient-to-b from-green-50 to-green-100 flex items-center justify-center p-2">
+      <div className="w-full max-w-7xl px-2 py-4">
         <div className="text-center">
-          
-          {/* Heading Section for Farmers */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-green-800 mb-2">Direct Market Access</h1>
+          <div className="mb-3">
+            <h1 className="text-4xl font-bold text-green-800 mb-2">
+              Direct Market Access
+            </h1>
             <p className="text-lg text-green-700 max-w-md mx-auto">
-              Connect farmers directly with customers. Fresh produce, fair prices, no middlemen.
+              Connect farmers directly with customers. Fresh produce, fair
+              prices, no middlemen.
             </p>
           </div>
 
-          {/* Login Card Section */}
           <Card className="w-full max-w-md border-green-200 bg-white/90 backdrop-blur shadow-md mb-8 mx-auto">
             <CardHeader className="text-center border-b border-green-100 bg-green-50/50">
-              <CardTitle className="text-2xl font-bold text-green-800">Login</CardTitle>
+              <CardTitle className="text-2xl font-bold text-green-800">
+                Login
+              </CardTitle>
               <CardDescription className="text-green-600">
                 Access your account
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleSecureLogin} className="space-y-4">
                 <div className="space-y-2">
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-5 w-5 text-green-600" />
@@ -117,7 +126,9 @@ const Login = () => {
                       placeholder="Email"
                       className="pl-10 border-green-200 focus:ring-green-500"
                       value={loginData.email}
-                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                      onChange={(e) =>
+                        setLoginData({ ...loginData, email: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -128,69 +139,93 @@ const Login = () => {
                       placeholder="Password"
                       className="pl-10 border-green-200 focus:ring-green-500"
                       value={loginData.password}
-                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      onChange={(e) =>
+                        setLoginData({ ...loginData, password: e.target.value })
+                      }
                       required
                     />
                   </div>
-                  {/* Role selection using buttons */}
                   <div className="flex gap-2 justify-center">
                     <Button
                       type="button"
-                      className={`flex-1 ${loginData.isFarmer ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'}`}
-                      onClick={() => setLoginData({ ...loginData, isFarmer: true })}
+                      className={`flex-1 ${
+                        loginData.isFarmer
+                          ? "bg-green-600 text-white"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                      onClick={() =>
+                        setLoginData({ ...loginData, isFarmer: true })
+                      }
                     >
                       <Sprout className="w-4 h-4 mr-2" />
                       I'm a Farmer
                     </Button>
                     <Button
                       type="button"
-                      className={`flex-1 ${!loginData.isFarmer ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'}`}
-                      onClick={() => setLoginData({ ...loginData, isFarmer: false })}
+                      className={`flex-1 ${
+                        !loginData.isFarmer
+                          ? "bg-green-600 text-white"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                      onClick={() =>
+                        setLoginData({ ...loginData, isFarmer: false })
+                      }
                     >
                       <Store className="w-4 h-4 mr-2" />
                       I'm a Customer
                     </Button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
+                <Button
+                  type="submit"
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
                   Login
                 </Button>
               </form>
               <div className="text-center mt-4">
                 <p className="text-sm text-green-600">
                   Don't have an account?{" "}
-                  <a href="/register" className="text-green-800 font-semibold hover:underline">
+                  <a
+                    href="/register"
+                    className="text-green-800 font-semibold hover:underline"
+                  >
                     Sign Up
                   </a>
                 </p>
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          {/* Cards Section: Hidden on small screens */}
-          <div className="mt-8 lg:grid lg:grid-cols-3 gap-4 max-w-4xl w-full mx-auto hidden lg:block">
-            <Card className="bg-white/80 shadow-md">
-              <CardContent className="pt-6 text-center">
-                <Sprout className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-green-800">For Farmers</h3>
-                <p className="text-sm text-green-600">Sell directly to customers and earn more</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/80 shadow-md">
-              <CardContent className="pt-6 text-center">
-                <Store className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-green-800">For Customers</h3>
-                <p className="text-sm text-green-600">Get fresh produce at better prices</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/80 shadow-md">
-              <CardContent className="pt-6 text-center">
-                <Lock className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <h3 className="font-semibold text-green-800">Secure Platform</h3>
-                <p className="text-sm text-green-600">Safe and transparent transactions</p>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="mt-3 lg:grid lg:grid-cols-3 gap-4 max-w-4xl w-full mx-auto hidden lg:block">
+          <Card className="bg-white/80 shadow-md">
+            <CardContent className="pt-6 text-center">
+              <Sprout className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <h3 className="font-semibold text-green-800">For Farmers</h3>
+              <p className="text-sm text-green-600">
+                Sell directly to customers and earn more
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/80 shadow-md">
+            <CardContent className="pt-6 text-center">
+              <Store className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <h3 className="font-semibold text-green-800">For Customers</h3>
+              <p className="text-sm text-green-600">
+                Get fresh produce at better prices
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/80 shadow-md">
+            <CardContent className="pt-6 text-center">
+              <Lock className="w-8 h-8 text-green-600 mx-auto mb-2" />
+              <h3 className="font-semibold text-green-800">Secure Platform</h3>
+              <p className="text-sm text-green-600">
+                Safe and transparent transactions
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
