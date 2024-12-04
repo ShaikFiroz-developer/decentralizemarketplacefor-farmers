@@ -2,7 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatUnits, getBigInt, parseUnits, toBigInt } from "ethers";
+import {
+  formatUnits,
+  getBigInt,
+  parseUnits,
+  toBigInt,
+  ethers,
+  isAddress,
+} from "ethers";
 import {
   Menu,
   Home,
@@ -33,8 +40,9 @@ const categories = [
   { name: "Dairy", icon: Milk },
 ];
 
+
 const HomePage = () => {
-  const { handlelogout, isLoggedIn } = useAuth();
+ const { handlelogout, isLoggedIn } = useAuth();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,18 +51,65 @@ const HomePage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [cartitems, setcartitems] = useState([]);
-  const [quantity, setquantity] = useState(0);
+  const [cartitems, setCartItems] = useState([]);
+  const [quantity, setQuantity] = useState(0);
   const productsPerPage = 8;
   const navigate = useNavigate();
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    filterProducts(term, selectedCategory);
+  };
+
+  const handleCategoryFilter = (category) => {
+    const newCategory = category === selectedCategory ? null : category;
+    setSelectedCategory(newCategory);
+    filterProducts(searchTerm, newCategory);
+  };
+
+  const filterProducts = (term, category) => {
+    let result = [...products];
+
+    if (term) {
+      result = result.filter((product) =>
+        product.productName.toLowerCase().includes(term.toLowerCase())
+      );
+    }
+
+    if (category) {
+      result = result.filter((product) => product.productType === category);
+    }
+
+    setFilteredProducts(result);
+    setCurrentPage(1);
+  };
+
+   const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(
+    indexOfFirstProduct,
+    indexOfLastProduct
+  );
+
+  const pageNumbers = [];
+  for (
+    let i = 1;
+    i <= Math.ceil(filteredProducts.length / productsPerPage);
+    i++
+  ) {
+    pageNumbers.push(i);
+  }
+
+
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate("/login");
     }
-    if (localStorage.getItem("useRole") == "farmer") {
+    if (localStorage.getItem("userRole") == "farmer") {
       navigate("/admin");
     }
+
     fetchProducts();
   }, [isLoggedIn]);
 
@@ -92,33 +147,7 @@ const HomePage = () => {
     }
   };
 
-  const handleSearch = (term) => {
-    setSearchTerm(term);
-    filterProducts(term, selectedCategory);
-  };
 
-  const handleCategoryFilter = (category) => {
-    const newCategory = category === selectedCategory ? null : category;
-    setSelectedCategory(newCategory);
-    filterProducts(searchTerm, newCategory);
-  };
-
-  const filterProducts = (term, category) => {
-    let result = [...products];
-
-    if (term) {
-      result = result.filter((product) =>
-        product.productName.toLowerCase().includes(term.toLowerCase())
-      );
-    }
-
-    if (category) {
-      result = result.filter((product) => product.productType === category);
-    }
-
-    setFilteredProducts(result);
-    setCurrentPage(1);
-  };
 
   const handleLogout = async () => {
     await handlelogout();
@@ -129,55 +158,80 @@ const HomePage = () => {
     setSelectedProduct(product);
     setModalOpen(true);
   };
-  const handlePurchase = async () => {
+
+  const handleAddToCart = async (product, quantity) => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
+    }
+    try {
+      if (isNaN(quantity) || quantity <= 0) {
+        alert("Please enter a valid quantity.");
+        return;
+      }
+
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      const contract = new Contract(
+        BuyerOperationsManagement,
+        BUYER_ABI,
+        signer
+      );
+      console.log(product);
+      const tx = await contract.addToCart(
+        product.seller,
+        BigInt(product._id),
+        product.productImageUrl,
+        BigInt(quantity),
+        BigInt(Math.floor(Number(product.productPrice)))
+      );
+
+      await tx.wait();
+      console.log(tx);
+
+      alert("Item added to cart successfully!");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Failed to add item to cart.");
+    }
+  };
+
+  const handlePurchaseProduct = async (product, quantity) => {
     if (!window.ethereum) {
       alert("Please install MetaMask!");
       return;
     }
 
-    const provider = new BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const contract = new Contract(BuyerOperationsManagement, BUYER_ABI, signer);
-
     try {
-      const price = parseUnits(selectedProduct.productPrice, 18);
+      const provider = new BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new Contract(
+        BuyerOperationsManagement,
+        BUYER_ABI,
+        signer
+      );
 
-      // Convert _id to BigInt directly
-      const productId = BigInt(selectedProduct._id);
-      console.log(productId);
-
-      const tx = await contract.addToCart(
-        productId.toString(),
-        quantity,
-        selectedProduct.seller,
-        selectedProduct.productName,
-        quantity * selectedProduct.productPrice,
-        selectedProduct.productImageUrl
+      /**
+        * uint index,
+        string memory buyerName,
+        string memory userAddress,
+        string memory userPhoneNo
+        */
+      const tx = await contract.purchaseSingleProduct(
+        BigInt(product._id),
+        product.seller,
+        quantity
       );
       await tx.wait();
-      alert("Purchase successful!");
-      setModalOpen(false);
+      alert("Product purchased successfully!");
     } catch (error) {
-      console.error("Purchase failed:", error);
-      alert("Purchase failed. Please try again.");
+      console.error("Error purchasing product:", error);
+      alert("Failed to purchase product.");
     }
   };
 
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
-  );
 
-  const pageNumbers = [];
-  for (
-    let i = 1;
-    i <= Math.ceil(filteredProducts.length / productsPerPage);
-    i++
-  ) {
-    pageNumbers.push(i);
-  }
 
   return (
     <div className="min-h-screen bg-green-50">
@@ -290,20 +344,24 @@ const HomePage = () => {
               className="shadow-md cursor-pointer"
               onClick={() => handleProductClick(product)}
             >
-              <CardContent className="space-y-2">
-                <img
-                  src={product.productImageUrl}
-                  alt={product.productName}
-                  className="h-48 object-cover w-full"
-                />
-                <div className="text-center space-y-1">
-                  <div className="font-bold text-lg">{product.productName}</div>
-                  <div className="text-gray-500">{product.productType}</div>
-                  <div className="text-green-700 text-xl">
-                    ${product.productPrice}
-                  </div>
-                </div>
-              </CardContent>
+              <CardContent className="space-y-4">
+  <img
+    src={product.productImageUrl}
+    alt={product.productName}
+    className="h-48 object-cover w-full rounded-md"
+  />
+
+  <div className="text-left space-y-2">
+    <div className="font-bold text-lg text-green-800">{product.productName}</div>
+
+    <div className="text-gray-500 text-sm">{product.productType}</div>
+
+    <div className="text-green-700 text-xl font-semibold">
+      ${product.productPrice}
+    </div>
+  </div>
+</CardContent>
+
             </Card>
           ))}
         </div>
@@ -323,64 +381,94 @@ const HomePage = () => {
       </div>
 
       {/* Modal */}
+      {/* Modal */}
       {modalOpen && selectedProduct && (
-        <div
-          className={`fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50 ${
-            modalOpen ? "block" : "hidden"
-          }`}
-        >
-          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
-            <h3 className="text-2xl font-bold mb-4">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-4 rounded-md shadow-md w-80">
+            {/* Product Title */}
+            <h3 className="text-xl font-semibold mb-2 text-gray-800">
               {selectedProduct.productName}
             </h3>
-            <p className="text-gray-700 mb-4">{selectedProduct.description}</p>
+
+            {/* Product Description */}
+            <p className="text-sm text-gray-600 mb-3">
+              {selectedProduct.description}
+            </p>
+
+            {/* Product Image */}
             <img
               src={selectedProduct.productImageUrl}
               alt={selectedProduct.productName}
-              className="w-full h-48 object-cover rounded-md mb-4"
+              className="w-full h-28 object-cover rounded-md mb-3"
             />
-            <div className="text-xl font-semibold mb-4">
+
+            {/* Product Price */}
+            <div className="text-lg font-medium text-gray-800 mb-3">
               Price: ₹{selectedProduct.productPrice}
             </div>
 
-            {/* Additional details */}
-            <div className="mb-4">
-              <span className="font-semibold">Seller ID:</span>{" "}
-              {selectedProduct.sellerId}
+            {/* Additional Details */}
+            <div className="mb-2">
+              <span className="font-medium text-sm text-gray-700">
+                Seller ID:
+              </span>
+              <p className="text-sm text-gray-600">
+                {selectedProduct.seller.substring(0, 5)}
+              </p>
             </div>
-            <div className="mb-4">
-              <span className="font-semibold">Packed Date:</span>{" "}
-              {new Date(selectedProduct.packedDate).toLocaleDateString()}
+            <div className="mb-2">
+              <span className="font-medium text-sm text-gray-700">
+                Packed Date:
+              </span>
+              <p className="text-sm text-gray-600">
+                {selectedProduct.createdDate}
+              </p>
             </div>
-            <div className="mb-4">
-              <span className="font-semibold">Expiry Date:</span>{" "}
-              {new Date(selectedProduct.expiryDate).toLocaleDateString()}
+            <div className="mb-2">
+              <span className="font-medium text-sm text-gray-700">
+                Expiry Date:
+              </span>
+              <p className="text-sm text-gray-600">
+                {selectedProduct.expiryDate}
+              </p>
+            </div>
+
+            {/* Quantity Input */}
+            <div className="mb-3">
+              <label className="block font-medium text-sm text-gray-700 mb-1">
+                Quantity:
+              </label>
+              <input
+                type="number"
+                onChange={(e) => setquantity(Number(e.target.value))}
+                className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                min={1}
+              />
             </div>
 
             {/* Buttons */}
-            <div className="flex justify-between items-center space-x-4">
-              {/* Cart and Buy Section */}
-              <div className="flex flex-col items-start space-y-4">
-                {/* Cart Section */}
-                <div className="w-full shadow p-4 flex flex-col items-start justify-start rounded-md space-y-2">
-                  <p className="text-sm font-medium text-white">Amount:</p>
-                  <input
-                    type="number"
-                    onChange={(e) => {
-                      setquantity(e.target.value);
-                    }}
-                    className="border border-gray-300 rounded-md px-2 py-1 w-24 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <Button onClick={handlePurchase} className="w-full">
-                    Add to Cart
-                  </Button>
-                </div>
-              </div>
+            <div className="flex justify-between space-x-3">
+              {/* Add to Cart */}
+              <Button
+                variant="default"
+                className="w-1/2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1 rounded-md"
+                onClick={async () => {
+                  await handleAddToCart(selectedProduct, quantity);
+                  setModalOpen(false); // Close modal on success
+                }}
+              >
+                Add to Cart
+              </Button>
 
-              {/* Close Button */}
+              {/* Buy Now */}
+             
+            </div>
+
+            {/* Close Button */}
+            <div className="mt-3 text-center">
               <Button
                 variant="destructive"
-                className="ml-2"
+                className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md"
                 onClick={() => setModalOpen(false)}
               >
                 Close

@@ -10,8 +10,18 @@ contract BuyerSignupLoginContract {
     }
 
     mapping(address => Buyer) public BuyerLoginSignup;
-    event ByerSignupSuccessful(string buyerName, string message);
 
+    // Events for different scenarios
+    event BuyerSignupSuccessful(string buyerName, string message);
+    event BuyerSignupFailed(string reason, address userAddress);
+    event BuyerLoginFailed(string reason, address userAddress);
+    event BuyerLoginSuccessful(
+        string buyerName,
+        address userAddress,
+        string phonenum
+    ); // New event for successful login
+
+    // Signup function
     function buyerSignup(
         string memory _name,
         string memory _email,
@@ -26,6 +36,28 @@ contract BuyerSignupLoginContract {
             "Invalid data provided for signup"
         );
 
+        // Check if the sender address already exists
+        if (bytes(BuyerLoginSignup[msg.sender].email).length > 0) {
+            emit BuyerSignupFailed(
+                "User with this MetaMask ID already exists. Please use the existing account or update details.",
+                msg.sender
+            );
+            return;
+        }
+
+        // Check if the email is already associated with another address
+        if (
+            keccak256(abi.encodePacked(BuyerLoginSignup[msg.sender].email)) ==
+            keccak256(abi.encodePacked(_email))
+        ) {
+            emit BuyerSignupFailed(
+                "Email already in use. Please use a different email.",
+                msg.sender
+            );
+            return;
+        }
+
+        // Add the buyer details to the mapping
         BuyerLoginSignup[msg.sender] = Buyer({
             name: _name,
             email: _email,
@@ -33,33 +65,39 @@ contract BuyerSignupLoginContract {
             password: _password
         });
 
-        emit ByerSignupSuccessful(_name, "Signup successful");
+        emit BuyerSignupSuccessful(_name, "Signup successful");
     }
 
-    function BuyerLogin(
-        string memory _email,
-        string memory _password
-    ) public view returns (bool) {
+    // Login function
+    function BuyerLogin(string memory _email, string memory _password) public {
         require(
             bytes(_email).length > 0 && bytes(_password).length > 0,
-            "Invalid data provided for Login"
+            "Invalid data provided for login"
         );
 
+        // Check if the email matches
         if (
-            keccak256(abi.encodePacked(BuyerLoginSignup[msg.sender].email)) ==
+            keccak256(abi.encodePacked(BuyerLoginSignup[msg.sender].email)) !=
             keccak256(abi.encodePacked(_email))
         ) {
-            if (
-                keccak256(
-                    abi.encodePacked(BuyerLoginSignup[msg.sender].password)
-                ) == keccak256(abi.encodePacked(_password))
-            ) {
-                return true;
-            } else {
-                revert("Incorrect password");
-            }
-        } else {
-            revert("Email not found");
+            emit BuyerLoginFailed("Email not found", msg.sender);
+            return;
         }
+
+        // Check if the password matches
+        if (
+            keccak256(
+                abi.encodePacked(BuyerLoginSignup[msg.sender].password)
+            ) != keccak256(abi.encodePacked(_password))
+        ) {
+            emit BuyerLoginFailed("Incorrect password", msg.sender);
+            return;
+        }
+
+        emit BuyerLoginSuccessful(
+            BuyerLoginSignup[msg.sender].name,
+            msg.sender,
+            BuyerLoginSignup[msg.sender].number
+        );
     }
 }

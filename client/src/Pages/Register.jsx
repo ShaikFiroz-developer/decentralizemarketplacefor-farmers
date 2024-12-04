@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { BrowserProvider, Contract, ethers } from "ethers";
-import { getContract } from "@/lib/etherjssetusp";
+import { BrowserProvider, Contract } from "ethers";
 import {
   BUYER_ABI,
   FARMER_ABI,
@@ -18,16 +16,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  User,
-  Mail,
-  Phone,
-  Lock,
-  Sprout,
-  Store,
-  CreditCard,
-  Home,
-} from "lucide-react";
+import { User, Mail, Phone, Lock, Sprout, Store } from "lucide-react";
 
 const Register = () => {
   const [signupData, setSignupData] = useState({
@@ -39,6 +28,8 @@ const Register = () => {
     walletAddress: "",
     address: "",
   });
+  const [feedbackMessage, setFeedbackMessage] = useState(""); // To display feedback messages
+  const [isSubmitting, setIsSubmitting] = useState(false); // To prevent double submits
 
   const navigate = useNavigate();
 
@@ -54,46 +45,80 @@ const Register = () => {
 
   const handleSecureSignup = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setFeedbackMessage(""); // Reset feedback message
 
     try {
+      // Ensure MetaMask is connected
       await handleMetaMaskCheck();
 
+      // Set up provider and signer
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const walletAddress = await signer.getAddress();
-      setSignupData({ ...signupData, walletAddress });
+      setSignupData((prevState) => ({ ...prevState, walletAddress }));
 
+      // Set contract address and ABI based on user type
       const contractAddress = signupData.isFarmer
         ? FarmerOperationsManagement
         : BuyerOperationsManagement;
       const contractABI = signupData.isFarmer ? FARMER_ABI : BUYER_ABI;
       const contract = new Contract(contractAddress, contractABI, signer);
       console.log(contract);
-      let tx;
-      // Only send the necessary fields for signup
-      if (signupData.isFarmer) {
-        tx = await contract.farmerSignup(
-          signupData.fullname,
-          signupData.email,
-          signupData.phoneNumber,
-          signupData.password // Send password to the contract (if necessary)
-        );
-      } else {
-        tx = await contract.buyerSignup(
-          signupData.fullname,
-          signupData.email,
-          signupData.phoneNumber,
-          signupData.password // Send password to the contract (if necessary)
-        );
+      // Call the appropriate signup method
+      const tx = signupData.isFarmer
+        ? await contract.farmerSignup(
+            signupData.fullname,
+            signupData.email,
+            signupData.phoneNumber,
+            signupData.password
+          )
+        : await contract.buyerSignup(
+            signupData.fullname,
+            signupData.email,
+            signupData.phoneNumber,
+            signupData.password
+          );
+
+      // Wait for the transaction to be mined
+      const receipt = await tx.wait();
+
+      // Define filters for events dynamically based on role
+      const signupFailedFilter = signupData.isFarmer
+        ? contract.filters.SignupFailed()
+        : contract.filters.BuyerSignupFailed();
+      const signupSuccessfulFilter = signupData.isFarmer
+        ? contract.filters.SignupSuccessful()
+        : contract.filters.BuyerSignupSuccessful();
+
+      const signupFailedEvents = await contract.queryFilter(signupFailedFilter);
+      if (signupFailedEvents.length > 0) {
+        const event = signupFailedEvents[0];
+        console.log("SignupFailed event:", event);
+        setFeedbackMessage(event.args.reason); // Reason for failure
+        return;
       }
 
-      await tx.wait();
+      // Query events for successful signup
+      const signupSuccessfulEvents = await contract.queryFilter(
+        signupSuccessfulFilter
+      );
+      if (signupSuccessfulEvents.length > 0) {
+        const event = signupSuccessfulEvents[0];
+        console.log("SignupSuccessful event:", event);
+        setFeedbackMessage(`Signup successful: ${event.args.message}`);
+        alert("Signup successful!");
+        navigate("/login");
+        return;
+      }
 
-      alert("Signup successful!");
-      navigate("/login");
+      // If no relevant events are emitted
+      setFeedbackMessage("An unknown error occurred during signup.");
     } catch (error) {
       console.error("Error during signup:", error.message);
-      alert("An error occurred during signup. Please try again.");
+      setFeedbackMessage("An error occurred during signup. Please try again.");
+    } finally {
+      setIsSubmitting(false); // Enable submit button
     }
   };
 
@@ -211,10 +236,21 @@ const Register = () => {
                   I'm a Customer
                 </Button>
               </div>
-              <Button type="submit" className="w-full bg-green-600 text-white">
-                Securely Signup with MetaMask
+              <Button
+                type="submit"
+                className="w-full bg-green-600 text-white"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Processing..."
+                  : "Securely Signup with MetaMask"}
               </Button>
             </form>
+            {feedbackMessage && (
+              <div className="mt-4 text-center text-sm text-red-600">
+                {feedbackMessage}
+              </div>
+            )}
             <div className="text-center mt-4">
               <p className="text-sm text-green-600">
                 Already have an account?

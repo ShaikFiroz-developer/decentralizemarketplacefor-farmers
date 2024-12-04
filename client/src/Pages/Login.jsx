@@ -25,7 +25,7 @@ const Login = () => {
     password: "",
     isFarmer: false,
   });
-  console.log(useAuth());
+  const [loading, setLoading] = useState(false);
   const { handleLogin } = useAuth();
   const navigate = useNavigate();
 
@@ -41,55 +41,79 @@ const Login = () => {
 
   const handleSecureLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       // Check if MetaMask is available
       await handleMetaMaskCheck();
 
+      // Create the provider and signer
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const walletAddress = await signer.getAddress();
 
-      // Choose contract and ABI based on user type
+      // Select contract based on role
       const contractAddress = loginData.isFarmer
         ? FarmerOperationsManagement
         : BuyerOperationsManagement;
       const contractABI = loginData.isFarmer ? FARMER_ABI : BUYER_ABI;
       const contract = new Contract(contractAddress, contractABI, signer);
 
+      // Select login function based on role
       const loginFunction = loginData.isFarmer
         ? contract.FarmerLogin
         : contract.BuyerLogin;
 
-      const isAuthenticated = await loginFunction(
-        loginData.email,
-        loginData.password
-      );
+      // Event names based on role
+      const successEvent = loginData.isFarmer
+        ? "LoginSuccessful"
+        : "BuyerLoginSuccessful";
+      const failureEvent = loginData.isFarmer
+        ? "LoginFailed"
+        : "BuyerLoginFailed";
 
-      if (isAuthenticated) {
+      // Attach event listeners for login success and failure
+      contract.on(successEvent, (userEmail) => {
+        console.log(`${successEvent} event:`, userEmail);
+        alert(`Login successful: ${userEmail}`);
+
+        // Store user details in localStorage
         localStorage.setItem("userEmail", loginData.email);
         localStorage.setItem(
-          "useRole",
+          "userRole",
           loginData.isFarmer ? "farmer" : "buyer"
         );
 
-        const res = await handleLogin();
-        console.log(res);
-        if (res) {
-          if (loginData.isFarmer) {
-            navigate("/admin");
-          } else {
-            navigate("/");
-          }
-        } else {
-          alert("login successs unable to set session");
-        }
-      } else {
-        alert("Something went wrong creating a session.");
-      }
+        // Call the login handler from context
+        handleLogin()
+          .then((res) => {
+            if (res) {
+              navigate("/admin");
+            } else {
+              alert("Unable to create session due to a server issue");
+            }
+          })
+          .catch((err) => {
+            console.error("Error creating session:", err);
+            alert("Failed to create session. Please try again.");
+          })
+          .finally(() => {
+            setLoading(false); // Stop the loader
+          });
+      });
+
+      contract.on(failureEvent, (reason) => {
+        console.error(`${failureEvent} event:`, reason);
+        alert(`Login failed: ${reason}`);
+        setLoading(false); // Stop the loader
+      });
+
+      // Initiating the login function and waiting for the transaction to be mined
+      const tx = await loginFunction(loginData.email, loginData.password);
+      await tx.wait();
     } catch (error) {
       console.error("Error during login:", error.message);
       alert("An error occurred during login. Please try again.");
+      setLoading(false); // Ensure loader is stopped on error
     }
   };
 
@@ -179,8 +203,13 @@ const Login = () => {
                 <Button
                   type="submit"
                   className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={loading} // Disable the button when loading
                 >
-                  Login
+                  {loading ? (
+                    <p>loading...</p> // Display loader if loading
+                  ) : (
+                    "Login"
+                  )}
                 </Button>
               </form>
               <div className="text-center mt-4">

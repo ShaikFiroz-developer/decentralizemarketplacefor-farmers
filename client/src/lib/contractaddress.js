@@ -1,8 +1,52 @@
-const FarmerOperationsManagement = "0x5c5d65F4f07C54C563DF09839d39694EB4Bcc5c7";
+const FarmerOperationsManagement = "0x646D8f79645D5bf574A807130b0acba4627aDD7a";
 
-const BuyerOperationsManagement = "0x6a8dA5E91ae4F78011343D34Dc45ff644222Fd43";
+const BuyerOperationsManagement = "0x6F61a2c4deA7cC4b7be0389427EdDeae972E0105";
 
 const FARMER_ABI = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "string",
+        name: "reason",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+    ],
+    name: "LoginFailed",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "string",
+        name: "buyerName",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "phone",
+        type: "string",
+      },
+    ],
+    name: "LoginSuccessful",
+    type: "event",
+  },
   {
     anonymous: false,
     inputs: [
@@ -59,6 +103,25 @@ const FARMER_ABI = [
       {
         indexed: false,
         internalType: "string",
+        name: "reason",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "userAddress",
+        type: "address",
+      },
+    ],
+    name: "SignupFailed",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "string",
         name: "farmerName",
         type: "string",
       },
@@ -86,16 +149,9 @@ const FARMER_ABI = [
       },
     ],
     name: "FarmerLogin",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
-    constant: true,
   },
   {
     inputs: [
@@ -197,6 +253,11 @@ const FARMER_ABI = [
         name: "averageRating",
         type: "uint256",
       },
+      {
+        internalType: "uint256",
+        name: "totalpurchaseamount",
+        type: "uint256",
+      },
     ],
     stateMutability: "view",
     type: "function",
@@ -234,6 +295,11 @@ const FARMER_ABI = [
       },
       {
         internalType: "string",
+        name: "userPhoneNo",
+        type: "string",
+      },
+      {
+        internalType: "string",
         name: "status",
         type: "string",
       },
@@ -243,18 +309,18 @@ const FARMER_ABI = [
         type: "string",
       },
       {
-        internalType: "string",
-        name: "userId",
-        type: "string",
+        internalType: "uint256",
+        name: "productid",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "orderid",
+        type: "uint256",
       },
       {
         internalType: "string",
-        name: "userPhoneNo",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "walletAddress",
+        name: "productImageUrl",
         type: "string",
       },
     ],
@@ -330,6 +396,11 @@ const FARMER_ABI = [
       {
         internalType: "uint256",
         name: "averageRating",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "totalpurchaseamount",
         type: "uint256",
       },
     ],
@@ -441,37 +512,12 @@ const FARMER_ABI = [
         type: "uint256",
       },
       {
-        internalType: "string",
-        name: "_buyerName",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_status",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_userAddress",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_userId",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_userPhoneNo",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_walletAddress",
-        type: "string",
+        internalType: "uint256",
+        name: "_amount",
+        type: "uint256",
       },
     ],
-    name: "addPurchase",
+    name: "updateTotalPurchaseAmount",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -488,55 +534,41 @@ const FARMER_ABI = [
         name: "_productId",
         type: "uint256",
       },
-    ],
-    name: "getPurchases",
-    outputs: [
       {
-        components: [
-          {
-            internalType: "string",
-            name: "buyerName",
-            type: "string",
-          },
-          {
-            internalType: "address",
-            name: "buyerAddress",
-            type: "address",
-          },
-          {
-            internalType: "string",
-            name: "status",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "userAddress",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "userId",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "userPhoneNo",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "walletAddress",
-            type: "string",
-          },
-        ],
-        internalType: "struct FarmerOperationsManagement.ProductPurchase[]",
-        name: "",
-        type: "tuple[]",
+        internalType: "string",
+        name: "_buyerName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_status",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_userAddress",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_userPhoneNo",
+        type: "string",
+      },
+      {
+        internalType: "uint256",
+        name: "productid",
+        type: "uint256",
+      },
+      {
+        internalType: "string",
+        name: "_productImageUrl",
+        type: "string",
       },
     ],
-    stateMutability: "view",
+    name: "addPurchase",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
-    constant: true,
   },
   {
     inputs: [
@@ -603,6 +635,11 @@ const FARMER_ABI = [
           {
             internalType: "uint256",
             name: "averageRating",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "totalpurchaseamount",
             type: "uint256",
           },
         ],
@@ -690,6 +727,11 @@ const FARMER_ABI = [
             name: "averageRating",
             type: "uint256",
           },
+          {
+            internalType: "uint256",
+            name: "totalpurchaseamount",
+            type: "uint256",
+          },
         ],
         internalType: "struct FarmerOperationsManagement.Product[]",
         name: "",
@@ -718,6 +760,11 @@ const FARMER_ABI = [
           },
           {
             internalType: "string",
+            name: "userPhoneNo",
+            type: "string",
+          },
+          {
+            internalType: "string",
             name: "status",
             type: "string",
           },
@@ -727,18 +774,18 @@ const FARMER_ABI = [
             type: "string",
           },
           {
-            internalType: "string",
-            name: "userId",
-            type: "string",
+            internalType: "uint256",
+            name: "productid",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "orderid",
+            type: "uint256",
           },
           {
             internalType: "string",
-            name: "userPhoneNo",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "walletAddress",
+            name: "productImageUrl",
             type: "string",
           },
         ],
@@ -812,355 +859,9 @@ const FARMER_ABI = [
             name: "averageRating",
             type: "uint256",
           },
-        ],
-        internalType: "struct FarmerOperationsManagement.Product[]",
-        name: "",
-        type: "tuple[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-];
-
-const BUYER_ABI = [
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "farmerContractAddress",
-        type: "address",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "constructor",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "string",
-        name: "buyerName",
-        type: "string",
-      },
-      {
-        indexed: false,
-        internalType: "string",
-        name: "message",
-        type: "string",
-      },
-    ],
-    name: "ByerSignupSuccessful",
-    type: "event",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_email",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_password",
-        type: "string",
-      },
-    ],
-    name: "BuyerLogin",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    name: "BuyerLoginSignup",
-    outputs: [
-      {
-        internalType: "string",
-        name: "name",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "email",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "number",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "password",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "buyerCarts",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "productId",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "quantity",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "seller",
-        type: "address",
-      },
-      {
-        internalType: "string",
-        name: "name",
-        type: "string",
-      },
-      {
-        internalType: "uint256",
-        name: "price",
-        type: "uint256",
-      },
-      {
-        internalType: "string",
-        name: "imgurl",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "buyerOrders",
-    outputs: [
-      {
-        internalType: "string",
-        name: "buyerName",
-        type: "string",
-      },
-      {
-        internalType: "address",
-        name: "buyerAddress",
-        type: "address",
-      },
-      {
-        internalType: "string",
-        name: "status",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "userAddress",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "userId",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "userPhoneNo",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "walletAddress",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "_name",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_email",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_number",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "_password",
-        type: "string",
-      },
-    ],
-    name: "buyerSignup",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-    ],
-    name: "buyerSpentAmount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [],
-    name: "farmerContract",
-    outputs: [
-      {
-        internalType: "contract FarmerOperationsManagement",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "orderStatus",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [],
-    name: "getAllFarmersProducts",
-    outputs: [
-      {
-        components: [
           {
             internalType: "uint256",
-            name: "productId",
-            type: "uint256",
-          },
-          {
-            internalType: "string",
-            name: "productName",
-            type: "string",
-          },
-          {
-            internalType: "uint256",
-            name: "productPrice",
-            type: "uint256",
-          },
-          {
-            internalType: "string",
-            name: "description",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "productType",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "productImageUrl",
-            type: "string",
-          },
-          {
-            internalType: "address",
-            name: "creator",
-            type: "address",
-          },
-          {
-            internalType: "string",
-            name: "productPackedDate",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "productExpire",
-            type: "string",
-          },
-          {
-            internalType: "uint256",
-            name: "ratingsCount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "averageRating",
+            name: "totalpurchaseamount",
             type: "uint256",
           },
         ],
@@ -1176,108 +877,17 @@ const BUYER_ABI = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "productId",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "quantity",
-        type: "uint256",
-      },
-      {
         internalType: "address",
-        name: "_seller",
+        name: "_farmerAddress",
         type: "address",
       },
       {
-        internalType: "string",
-        name: "_name",
-        type: "string",
-      },
-      {
         internalType: "uint256",
-        name: "_price",
+        name: "_productId",
         type: "uint256",
       },
-      {
-        internalType: "string",
-        name: "_imgurl",
-        type: "string",
-      },
     ],
-    name: "addToCart",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "productId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "sellerid",
-        type: "address",
-      },
-    ],
-    name: "removeFromCart",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCartItems",
-    outputs: [
-      {
-        components: [
-          {
-            internalType: "uint256",
-            name: "productId",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "quantity",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "seller",
-            type: "address",
-          },
-          {
-            internalType: "string",
-            name: "name",
-            type: "string",
-          },
-          {
-            internalType: "uint256",
-            name: "price",
-            type: "uint256",
-          },
-          {
-            internalType: "string",
-            name: "imgurl",
-            type: "string",
-          },
-        ],
-        internalType: "struct BuyerOperationsManagement.CartItem[]",
-        name: "",
-        type: "tuple[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
-  {
-    inputs: [],
-    name: "getOrders",
+    name: "getPurchaseDetails",
     outputs: [
       {
         components: [
@@ -1293,6 +903,11 @@ const BUYER_ABI = [
           },
           {
             internalType: "string",
+            name: "userPhoneNo",
+            type: "string",
+          },
+          {
+            internalType: "string",
             name: "status",
             type: "string",
           },
@@ -1302,24 +917,24 @@ const BUYER_ABI = [
             type: "string",
           },
           {
-            internalType: "string",
-            name: "userId",
-            type: "string",
+            internalType: "uint256",
+            name: "productid",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "orderid",
+            type: "uint256",
           },
           {
             internalType: "string",
-            name: "userPhoneNo",
-            type: "string",
-          },
-          {
-            internalType: "string",
-            name: "walletAddress",
+            name: "productImageUrl",
             type: "string",
           },
         ],
-        internalType: "struct FarmerOperationsManagement.ProductPurchase[]",
+        internalType: "struct FarmerOperationsManagement.ProductPurchase",
         name: "",
-        type: "tuple[]",
+        type: "tuple",
       },
     ],
     stateMutability: "view",
@@ -1330,12 +945,17 @@ const BUYER_ABI = [
     inputs: [
       {
         internalType: "uint256",
-        name: "orderId",
+        name: "_productId",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_orderIndex",
         type: "uint256",
       },
       {
         internalType: "string",
-        name: "status",
+        name: "_status",
         type: "string",
       },
     ],
@@ -1344,27 +964,607 @@ const BUYER_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "orderId",
-        type: "uint256",
-      },
-    ],
-    name: "getOrderStatus",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-    constant: true,
-  },
 ];
+
+const BUYER_ABI = [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "farmerContractAddress",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "userAddress",
+          "type": "address"
+        }
+      ],
+      "name": "BuyerLoginFailed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "buyerName",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "userAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "phonenum",
+          "type": "string"
+        }
+      ],
+      "name": "BuyerLoginSuccessful",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "userAddress",
+          "type": "address"
+        }
+      ],
+      "name": "BuyerSignupFailed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "buyerName",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "message",
+          "type": "string"
+        }
+      ],
+      "name": "BuyerSignupSuccessful",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_email",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_password",
+          "type": "string"
+        }
+      ],
+      "name": "BuyerLogin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "BuyerLoginSignup",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "email",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "number",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "password",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "buyerCart",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "farmerAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "productId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "imgurl",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "quantity",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalprice",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "buyerPurchaseHistory",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "farmerAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "productId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "productName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "productPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "productType",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "productImageUrl",
+              "type": "string"
+            },
+            {
+              "internalType": "address",
+              "name": "creator",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "productPackedDate",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "productExpire",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "ratingsCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "averageRating",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalpurchaseamount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct FarmerOperationsManagement.Product",
+          "name": "productDetails",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "quantity",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalprice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "productImageUrl",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_email",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_number",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_password",
+          "type": "string"
+        }
+      ],
+      "name": "buyerSignup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "farmerContract",
+      "outputs": [
+        {
+          "internalType": "contract FarmerOperationsManagement",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "farmerAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "productId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "imgurl",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "quantity",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
+      ],
+      "name": "addToCart",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeFromCart",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMyCartItems",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "farmerAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "productId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "imgurl",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantity",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "price",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalprice",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BuyerOperationsManagement.CartItem[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "buyerName",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "userAddress",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "userPhoneNo",
+          "type": "string"
+        }
+      ],
+      "name": "purchaseCart",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "index",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "buyerName",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "userAddress",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "userPhoneNo",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "productid",
+          "type": "uint256"
+        }
+      ],
+      "name": "purchaseSingleProduct",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getPurchaseHistory",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "farmerAddress",
+              "type": "address"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "productId",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "string",
+                  "name": "productName",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "productPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "string",
+                  "name": "description",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "productType",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "productImageUrl",
+                  "type": "string"
+                },
+                {
+                  "internalType": "address",
+                  "name": "creator",
+                  "type": "address"
+                },
+                {
+                  "internalType": "string",
+                  "name": "productPackedDate",
+                  "type": "string"
+                },
+                {
+                  "internalType": "string",
+                  "name": "productExpire",
+                  "type": "string"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "ratingsCount",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "averageRating",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "totalpurchaseamount",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct FarmerOperationsManagement.Product",
+              "name": "productDetails",
+              "type": "tuple"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantity",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalprice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "productImageUrl",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BuyerOperationsManagement.PurchasedProduct[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    }
+  ]
+
 export {
   FarmerOperationsManagement,
   BuyerOperationsManagement,

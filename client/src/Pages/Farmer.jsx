@@ -18,46 +18,20 @@ import {
   DollarSign,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { FARMER_ABI } from "@/lib/contractaddress";
+import {
+  BUYER_ABI,
+  BuyerOperationsManagement,
+  FARMER_ABI,
+} from "@/lib/contractaddress";
 import { FarmerOperationsManagement } from "@/lib/contractaddress";
 import { BrowserProvider, parseEther } from "ethers";
 import { Contract, formatUnits } from "ethers";
 import { useAuth } from "@/context/authContext";
 
-const buyers = [
-  {
-    orderId: "101",
-    buyer: "ruhem",
-    productId: "1",
-    quantity: 10,
-    price: "50",
-    status: "Pending",
-    productName: "",
-  },
-  {
-    orderId: "102",
-    buyer: "Shami",
-    productId: "2",
-    quantity: 5,
-    price: "15",
-    status: "rakaf",
-    productName: "",
-  },
-  {
-    orderId: "103",
-    buyer: "kaleem",
-    productId: "1",
-    quantity: 20,
-    price: "100",
-    status: "Pending",
-    productName: "",
-  },
-];
-
 const FarmerDashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
-  const [orders, setOrders] = useState(buyers);
+  const [orders, setOrders] = useState([]);
   const [revenue, setRevenue] = useState(0);
   const [newProduct, setNewProduct] = useState({});
   const navigate = useNavigate();
@@ -83,24 +57,32 @@ const FarmerDashboard = ({ onLogout }) => {
     fetchOrders();
   }, []);
 
-  const { handlelogout } = useAuth();
+  const { handlelogout, isLoggedIn } = useAuth();
+const fetchProducts = async () => {
+  try {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
+    }
 
-  const fetchProducts = async () => {
-    try {
-      if (!window.ethereum) {
-        alert("Please install MetaMask!");
-        return;
-      }
+    const provider = new BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new Contract(
+      FarmerOperationsManagement,
+      FARMER_ABI,
+      signer
+    );
+    const tx = await contract.getMyProducts();
+    console.log(tx);
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new Contract(
-        FarmerOperationsManagement,
-        FARMER_ABI,
-        signer
-      );
-      const tx = await contract.getMyProducts();
-      const formattedProducts = tx.map((product) => ({
+    // Initialize revenue accumulator
+    let totalRevenue = BigInt(0);
+
+    const formattedProducts = tx.map((product) => {
+      // Accumulate revenue
+      totalRevenue += product[11]; // Assuming product[11] contains the revenue
+
+      return {
         _id: product[0],
         productName: product[1],
         productPrice: formatUnits(product[2], 18),
@@ -111,45 +93,59 @@ const FarmerDashboard = ({ onLogout }) => {
         createdDate: product[7],
         expiryDate: product[8],
         quantity: product[9],
-      }));
-      setProducts(formattedProducts);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+        amountEarned: formatUnits(product[11], 18), // Format the revenue for display
+      };
+    });
 
-  const fetchOrders = async () => {
-    try {
-      if (!window.ethereum) {
-        alert("Please install MetaMask!");
-        return;
-      }
+    setProducts(formattedProducts);
+        const totalRevenueNumber = Number(totalRevenue.toString());
+setRevenue(totalRevenueNumber)
+    
+  } catch (error) {
+    console.log(error);
+  }
+};
 
-      const provider = new BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new Contract(
-        FarmerOperationsManagement,
-        FARMER_ABI,
-        signer
-      );
-      const tx = await contract.getMyProductOrders();
-      const formattedOrders = tx.map((order) => ({
-        orderId: order[0],
-        buyer: order[1],
-        productId: order[2],
-        quantity: order[3],
-        price: formatUnits(order[4], 18),
-        status: order[5],
-      }));
-      setRevenue(Math.ceil(Math.random() * 1000) * 10);
-    } catch (error) {
-      console.log(error);
+
+
+ const fetchOrders = async () => {
+  try {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
     }
-  };
+
+    const provider = new BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const contract = new Contract(
+      FarmerOperationsManagement,
+      FARMER_ABI,
+      signer
+    );
+    const tx = await contract.getMyProductOrders();
+
+    const formattedOrders = tx.map((order, index) => ({
+      orderId: order[2], 
+      buyerName: order[0], 
+      buyerAddress: order[1], 
+      status: order[3],
+      userAddress: order[4], 
+      userPhoneNo: order[5], 
+      productId: order[6], 
+      productImageUrl: order[7], 
+    }));
+
+    setOrders(formattedOrders);
+    console.log(tx);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
   useEffect(() => {
-    if (localStorage.getItem("useRole") === "buyer") {
-      navigate("/admin");
+    if (localStorage.getItem("userRole") === "buyer") {
+      navigate("/");
     }
   }, []);
 
@@ -212,7 +208,7 @@ const FarmerDashboard = ({ onLogout }) => {
       console.log("Image uploaded successfully:", imageUrl);
       setNewProduct((prev) => ({
         ...prev,
-        imageUrl: imageUrl, // Set the image URL
+        imageUrl: imageUrl, 
       }));
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -272,7 +268,7 @@ const FarmerDashboard = ({ onLogout }) => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">
-                  Active Orders
+                  All Orders
                 </p>
                 <h3 className="text-2xl font-bold text-green-800">
                   {otherOrders.length}
@@ -343,9 +339,7 @@ const FarmerDashboard = ({ onLogout }) => {
                         <p className="text-green-700 font-semibold text-md">
                           Price: ₹{product.productPrice}
                         </p>
-                        <p className="text-gray-600 text-sm mt-1">
-                          Quantity: {product.quantity}
-                        </p>
+                      
                       </div>
                     </CardContent>
                   </Card>
@@ -395,60 +389,65 @@ const FarmerDashboard = ({ onLogout }) => {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold text-green-800">Orders</h2>
               <span className="text-lg text-green-600">
-                Active Orders:{" "}
-                {orders.filter((order) => order.status === "active").length}
+                All Orders:{" "}
+                {orders.length}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 px-4">
-              {orders.map((order) => (
-                <div
-                  key={order.orderId}
-                  className="bg-white/90 rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out p-6 relative overflow-hidden"
-                >
-                  {/* Decorative Gradient Border */}
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-green-100 via-green-50 to-green-200 opacity-40"></div>
+           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 px-4">
+  {orders.map((order) => (
+    <div
+      key={order.orderId}
+      className="bg-white/90 rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out p-6 relative overflow-hidden"
+    >
+      {/* Decorative Gradient Border */}
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-green-100 via-green-50 to-green-200 opacity-40"></div>
 
-                  {/* Card Content */}
-                  <div className="relative z-10">
-                    <header className="mb-4">
-                      <h3 className="text-xl font-bold text-green-800">
-                        Order ID: {order.orderId}
-                      </h3>
-                      <p className="text-sm text-green-600">
-                        Buyer: {order.buyer}
-                      </p>
-                    </header>
-                    <main className="space-y-3 text-gray-700">
-                      <p>
-                        <span className="font-semibold">Product ID:</span>{" "}
-                        {order.productId}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Quantity:</span>{" "}
-                        {order.quantity}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Price:</span> ₹
-                        {order.price}
-                      </p>
-                      <p>
-                        <span className="font-semibold">Status:</span>{" "}
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            order.status === "Delivered"
-                              ? "bg-green-200 text-green-800"
-                              : "bg-red-200 text-red-800"
-                          }`}
-                        >
-                          {order.status}
-                        </span>
-                      </p>
-                    </main>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Card Content */}
+      <div className="relative flex z-10">
+        <div className="flex flex-col">
+        <header className="mb-4">
+          <h3 className="text-xl font-bold text-green-800">
+            Order ID: {order.orderId}
+          </h3>
+          <p className="text-sm text-green-600">
+            Buyer: {order.buyerName}
+          </p>
+        </header>
+        <main className="space-y-3 text-gray-700">
+          <p>
+            <span className="font-semibold">Buyer Address:</span>{" "}
+            {order.buyerAddress.substring(1,6)}
+          </p>
+          <p>
+            <span className="font-semibold">Seller Address:</span>{" "}
+            {order.userAddress}
+          </p>
+          <p>
+            <span className="font-semibold">Status:</span>{" "}
+            <span
+              className={`px-2 py-1 rounded-full text-xs ${
+                order.status === "Delivered"
+                  ? "bg-green-200 text-green-800"
+                  : "bg-red-200 text-red-800"
+              }`}
+            >
+              {"delivered"}
+            </span>
+          </p>
+         
+        </main>
+        </div>
+         <img
+            src={order.productImageUrl}
+            alt={`Product Image for ${order.productId}`}
+            className="w-full h-14 w-14 object-contain rounded-lg mt-4 "
+          />
+      </div>
+    </div>
+  ))}
+</div>
+
           </TabsContent>
 
           <TabsContent value="addProduct">

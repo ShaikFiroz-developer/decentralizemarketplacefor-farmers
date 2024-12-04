@@ -14,18 +14,12 @@ import Cart from "./Pages/Cart";
 import Orders from "./Pages/Orders";
 import Product from "./Pages/Product";
 
-// PrivateRoute component to handle protected routes with role-based access
 function PrivateRoute({ children, allowedRoles }) {
   const { isLoggedIn } = useAuth();
-  const userRole = localStorage.getItem("useRole");
+  const userRole = localStorage.getItem("userRole");
 
-  if (!isLoggedIn && userRole == undefined) {
+  if (!isLoggedIn || !userRole) {
     return <Navigate to="/login" />;
-  }
-
-  // Check if the user's role is allowed for this route
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to="/" />;
   }
 
   return children;

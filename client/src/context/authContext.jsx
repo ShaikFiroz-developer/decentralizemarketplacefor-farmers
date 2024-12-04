@@ -63,7 +63,7 @@ const AuthProvider = ({ children }) => {
 
   const handlelogout = () => {
     localStorage.removeItem("userEmail");
-    localStorage.removeItem("useRole");
+    localStorage.removeItem("userRole");
 
     Cookies.remove("token");
     console.log(Cookies.get("token"));
